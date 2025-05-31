@@ -36,11 +36,8 @@ RUN wget https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.4.6.ta
     make install-webconf
 
 # Instala plugins de Nagios
-RUN wget https://nagios-plugins.org/download/nagios-plugins-2.3.3.tar.gz && \
-    tar zxvf nagios-plugins-2.3.3.tar.gz && \
-    cd nagios-plugins-2.3.3 && \
-    ./configure --with-nagios-user=nagios --with-nagios-group=nagios && \
-    make && make install
+RUN wget https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.4.6.tar.gz && \
+    tar zxvf nagios-4.4.6.tar.gz && \
     cd nagios-4.4.6 && \
     ./configure --with-command-group=nagcmd && \
     make all && \
@@ -49,14 +46,7 @@ RUN wget https://nagios-plugins.org/download/nagios-plugins-2.3.3.tar.gz && \
     make install-commandmode && \
     make install-config && \
     make install-webconf
-
-# Instala plugins de Nagios
-RUN wget https://nagios-plugins.org/download/nagios-plugins-2.3.3.tar.gz && \
-    tar zxvf nagios-plugins-2.3.3.tar.gz && \
-    cd nagios-plugins-2.3.3 && \
-    ./configure --with-nagios-user=nagios --with-nagios-group=nagios && \
-    make && make install
-
+    
 # Configura usuario para interfaz web (usaremos archivo copiado después)
 COPY nagiosadmin.password /tmp/nagiosadmin.password
 RUN htpasswd -cb /usr/local/nagios/etc/htpasswd.users nagios $(cat /tmp/nagiosadmin.password)
