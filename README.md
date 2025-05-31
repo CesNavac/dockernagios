@@ -17,6 +17,10 @@ RUN apt-get update && apt-get install -y \
 RUN useradd nagios && groupadd nagcmd \
     && usermod -a -G nagcmd nagios \
     && usermod -a -G nagcmd www-data
+# datos del usuario
+# usuario: nagios
+# clave: duoc.2025
+
 
 # Descarga e instala Nagios Core
 WORKDIR /tmp
