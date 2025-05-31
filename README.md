@@ -75,4 +75,5 @@ EXPOSE 80
 CMD ["bash", "-c", "service apache2 start && service nagios start && tail -f /usr/local/nagios/var/nagios.log"]
 ### A continuacion adjunto la imagen que subi junto con los comandos ###
 ### ![image](https://github.com/user-attachments/assets/d1141c41-01cf-4bc0-95fd-20e809cc37fb)
-
+### Link para ver la imagen subida, esta en publico###
+### https://github.com/users/CesNavac/packages/container/package/nagios-core 
