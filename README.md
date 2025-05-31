@@ -73,4 +73,6 @@ EXPOSE 80
 
 # Comando para iniciar Apache y Nagios
 CMD ["bash", "-c", "service apache2 start && service nagios start && tail -f /usr/local/nagios/var/nagios.log"]
+### A continuacion adjunto la imagen que subi junto con los comandos ###
+### ![image](https://github.com/user-attachments/assets/d1141c41-01cf-4bc0-95fd-20e809cc37fb)
 
