@@ -92,3 +92,5 @@ CMD ["/start.sh"]
 #### Pruebas del push hacia git #####
 #### ![image](https://github.com/user-attachments/assets/a1888571-43e4-40b0-9830-370e1d32d64a) ######
 ### link directo para verificar la imagen de docker https://github.com/users/CesNavac/packages/container/package/nagios-core ####
+### Prueba que en mi maquina si funciono ![image](https://github.com/user-attachments/assets/59cb0184-6bc2-47c8-b391-aca0b9e22b86)####
+
