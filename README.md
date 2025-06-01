@@ -1,32 +1,26 @@
- #Usar una imagen base de Ubuntu
 FROM ubuntu:22.04
 
-# Evita interacciones durante la instalación
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Instala dependencias necesarias para armar una imagen de docker con nagios
+# Instala dependencias
 RUN apt-get update && apt-get install -y \
     autoconf gcc libc6 make wget unzip apache2 \
     apache2-utils php libapache2-mod-php \
     libgd-dev libmcrypt-dev libssl-dev \
-    daemon libperl-dev libssl-dev snmp \
+    daemon libperl-dev snmp \
     build-essential libnet-snmp-perl gettext \
-    && rm -rf /var/lib/apt/lists/*
+    vim curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Configura Apache
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
 # Crea usuario y grupo nagios
-RUN useradd nagios && groupadd nagcmd \
-    && usermod -a -G nagcmd nagios \
-    && usermod -a -G nagcmd www-data
-# datos del usuario
-# usuario: nagios
-# clave: duoc.2025
+RUN useradd nagios && groupadd nagcmd && \
+    usermod -a -G nagcmd nagios && \
+    usermod -a -G nagcmd www-data
 
-
-# Descarga e instala Nagios Core
-WORKDIR /tmp
-RUN wget https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.4.6.tar.gz && \
-    tar zxvf nagios-4.4.6.tar.gz && \
-# Descarga e instala Nagios Core
+# Instala Nagios Core
 WORKDIR /tmp
 RUN wget https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.4.6.tar.gz && \
     tar zxvf nagios-4.4.6.tar.gz && \
@@ -45,28 +39,53 @@ RUN wget https://nagios-plugins.org/download/nagios-plugins-2.3.3.tar.gz && \
     cd nagios-plugins-2.3.3 && \
     ./configure --with-nagios-user=nagios --with-nagios-group=nagios && \
     make && make install
-    cd nagios-4.4.6 && \
-    ./configure --with-command-group=nagcmd && \
-    make all && \
-    make install && \
-    make install-init && \
-    make install-commandmode && \
-    make install-config && \
-    make install-webconf
-# Configura usuario para interfaz web (usaremos archivo copiado después)
-COPY nagiosadmin.password /tmp/nagiosadmin.password
-RUN htpasswd -cb /usr/local/nagios/etc/htpasswd.users nagios $(cat /tmp/nagiosadmin.password)
 
-# Habilita módulos y servicios
-RUN a2enmod cgi && \
-    update-rc.d nagios defaults
+# Crea usuario web nagios con contraseña 'admin123'
+RUN htpasswd -cb /usr/local/nagios/etc/htpasswd.users nagios admin123
 
-# Expón el puerto de la interfaz web
+# Escribe commands.cfg con todos los comandos necesarios
+RUN echo 'define command {' > /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '    command_name    check-host-alive' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '    command_line    $USER1$/check_ping -H $HOSTADDRESS$ -w 100.0,20% -c 500.0,60%' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '}' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo 'define command {' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '    command_name    notify-service-by-email' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '    command_line    /bin/echo "Service Alert: $SERVICEDESC$ on $HOSTNAME$ is $SERVICESTATE$"' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '}' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo 'define command {' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '    command_name    notify-host-by-email' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '    command_line    /bin/echo "Host Alert: $HOSTNAME$ is $HOSTSTATE$"' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '}' >> /usr/local/nagios/etc/objects/commands.cfg
+
+# Escribe localhost.cfg con host y servicio funcional
+RUN echo 'define host {' > /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    use                     linux-server' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    host_name               localhost' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    alias                   Localhost' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    address                 127.0.0.1' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    check_command           check-host-alive' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    max_check_attempts      5' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    check_period            24x7' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    notification_interval   30' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    notification_period     24x7' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '}' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo 'define service {' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    use                     generic-service' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    host_name               localhost' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    service_description     PING' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    check_command           check-host-alive' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '}' >> /usr/local/nagios/etc/objects/localhost.cfg
+
+# Habilita CGI
+RUN a2enmod cgi
+
+# Script de inicio
+RUN echo '#!/bin/bash' > /start.sh && \
+    echo 'service apache2 start' >> /start.sh && \
+    echo 'service nagios start' >> /start.sh && \
+    echo 'tail -F /usr/local/nagios/var/nagios.log' >> /start.sh && \
+    chmod +x /start.sh
+
 EXPOSE 80
 
-# Comando para iniciar Apache y Nagios
-CMD ["bash", "-c", "service apache2 start && service nagios start && tail -f /usr/local/nagios/var/nagios.log"]
-### A continuacion adjunto la imagen que subi junto con los comandos ###
-### ![image](https://github.com/user-attachments/assets/d1141c41-01cf-4bc0-95fd-20e809cc37fb)
-### Link para ver la imagen subida, esta en publico###
-### https://github.com/users/CesNavac/packages/container/package/nagios-core 
+CMD ["/start.sh"]
