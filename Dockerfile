@@ -43,13 +43,21 @@ RUN wget https://nagios-plugins.org/download/nagios-plugins-2.3.3.tar.gz && \
 # Crea usuario web nagios con contraseña 'admin123'
 RUN htpasswd -cb /usr/local/nagios/etc/htpasswd.users nagios admin123
 
-# Escribe commands.cfg funcional directamente
+# Escribe commands.cfg con todos los comandos necesarios
 RUN echo 'define command {' > /usr/local/nagios/etc/objects/commands.cfg && \
     echo '    command_name    check-host-alive' >> /usr/local/nagios/etc/objects/commands.cfg && \
-    echo '    command_line    \$USER1\$/check_ping -H \$HOSTADDRESS\$ -w 100.0,20% -c 500.0,60%' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '    command_line    $USER1$/check_ping -H $HOSTADDRESS$ -w 100.0,20% -c 500.0,60%' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '}' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo 'define command {' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '    command_name    notify-service-by-email' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '    command_line    /bin/echo "Service Alert: $SERVICEDESC$ on $HOSTNAME$ is $SERVICESTATE$"' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '}' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo 'define command {' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '    command_name    notify-host-by-email' >> /usr/local/nagios/etc/objects/commands.cfg && \
+    echo '    command_line    /bin/echo "Host Alert: $HOSTNAME$ is $HOSTSTATE$"' >> /usr/local/nagios/etc/objects/commands.cfg && \
     echo '}' >> /usr/local/nagios/etc/objects/commands.cfg
 
-# Escribe localhost.cfg funcional directamente
+# Escribe localhost.cfg con host y servicio funcional
 RUN echo 'define host {' > /usr/local/nagios/etc/objects/localhost.cfg && \
     echo '    use                     linux-server' >> /usr/local/nagios/etc/objects/localhost.cfg && \
     echo '    host_name               localhost' >> /usr/local/nagios/etc/objects/localhost.cfg && \
@@ -60,12 +68,18 @@ RUN echo 'define host {' > /usr/local/nagios/etc/objects/localhost.cfg && \
     echo '    check_period            24x7' >> /usr/local/nagios/etc/objects/localhost.cfg && \
     echo '    notification_interval   30' >> /usr/local/nagios/etc/objects/localhost.cfg && \
     echo '    notification_period     24x7' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '}' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo 'define service {' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    use                     generic-service' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    host_name               localhost' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    service_description     PING' >> /usr/local/nagios/etc/objects/localhost.cfg && \
+    echo '    check_command           check-host-alive' >> /usr/local/nagios/etc/objects/localhost.cfg && \
     echo '}' >> /usr/local/nagios/etc/objects/localhost.cfg
 
-# Habilita CGI en Apache
+# Habilita CGI
 RUN a2enmod cgi
 
-# Crea script de inicio
+# Script de inicio
 RUN echo '#!/bin/bash' > /start.sh && \
     echo 'service apache2 start' >> /start.sh && \
     echo 'service nagios start' >> /start.sh && \
@@ -74,5 +88,4 @@ RUN echo '#!/bin/bash' > /start.sh && \
 
 EXPOSE 80
 
-# Script de inicio
-CMD ["bash", "-c", "service apache2 start && service nagios start && tail -F /usr/local/nagios/var/nagios.log"]
+CMD ["/start.sh"]
