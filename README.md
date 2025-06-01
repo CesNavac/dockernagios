@@ -91,3 +91,4 @@ EXPOSE 80
 CMD ["/start.sh"]
 #### Pruebas del push hacia git #####
 #### ![image](https://github.com/user-attachments/assets/a1888571-43e4-40b0-9830-370e1d32d64a) ######
+### link directo para verificar la imagen de docker https://github.com/users/CesNavac/packages/container/package/nagios-core ####
